@@ -8,7 +8,7 @@ let zoom = 0.25;
 let offsetX = 0;
 let offsetY = 0;
 
-let maxIter = 200; // Adjustable
+let maxIter = 100; // Adjustable
 
 function mandelbrot(x, y) {
   let real = x;
@@ -52,9 +52,9 @@ function render() {
         g = 0;
         b = 0;
       } else {
-        let hue = 300 - ((Math.pow(iter / 50, 0.5) * 200) % 255);
+        let hue = 250 - ((Math.pow(iter / 50, 0.5) * 200) % 255);
         let sat = 80;
-        let bri = 100;
+        let bri = 10 + ((Math.pow(iter / 50, 0.2) * 100) % 255);
 
         [r, g, b] = hsbToRgb(hue, sat, bri);
       }
@@ -103,53 +103,45 @@ canvas.addEventListener("mousemove", handleMouseDrag);
 // PHONE
 //
 
-// Variables to track the initial touch points and zoom level
+let touchStartX = 0;
+let touchStartY = 0;
+let initialZoom = zoom;
 let initialDistance = 0;
-let currentZoom = 1;
-let startX, startY;
-
-canvas.addEventListener("touchstart", handleTouchStart, false);
-canvas.addEventListener("touchmove", handleTouchMove, false);
-canvas.addEventListener("touchend", handleTouchEnd, false);
 
 function handleTouchStart(event) {
   if (event.touches.length === 1) {
-    // Single touch - swipe
-    startX = event.touches[0].pageX;
-    startY = event.touches[0].pageY;
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
   } else if (event.touches.length === 2) {
-    // Two touches - pinch zoom
-    const dx = event.touches[1].pageX - event.touches[0].pageX;
-    const dy = event.touches[1].pageY - event.touches[0].pageY;
-    initialDistance = Math.sqrt(dx * dx + dy * dy);
+    initialDistance = getDistance(event.touches[0], event.touches[1]);
+    initialZoom = zoom;
   }
 }
 
 function handleTouchMove(event) {
   if (event.touches.length === 1) {
-    // Single touch - swipe
-    const deltaX = event.touches[0].pageX - startX;
-    const deltaY = event.touches[0].pageY - startY;
-    // Move the canvas or image
-    // Example: Adjust position based on deltaX and deltaY
-    canvas.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    const touch = event.touches[0];
+    offsetX -= (touch.clientX - touchStartX) / (0.5 * zoom * canvas.width);
+    offsetY -= (touch.clientY - touchStartY) / (0.5 * zoom * canvas.height);
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
   } else if (event.touches.length === 2) {
-    // Two touches - pinch zoom
-    const dx = event.touches[1].pageX - event.touches[0].pageX;
-    const dy = event.touches[1].pageY - event.touches[0].pageY;
-    const currentDistance = Math.sqrt(dx * dx + dy * dy);
-    const zoomFactor = currentDistance / initialDistance;
-    currentZoom *= zoomFactor;
-    // Apply zoom
-    canvas.style.transform = `scale(${currentZoom})`;
-    initialDistance = currentDistance;
+    const newDistance = getDistance(event.touches[0], event.touches[1]);
+    zoom = initialZoom * (newDistance / initialDistance);
   }
+  render();
+  event.preventDefault(); // Prevent scrolling while using touch
 }
 
-function handleTouchEnd(event) {
-  // Reset initial values after touch ends
-  initialDistance = 0;
+function getDistance(touch1, touch2) {
+  const dx = touch1.clientX - touch2.clientX;
+  const dy = touch1.clientY - touch2.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
 }
+
+// Add touch event listeners
+canvas.addEventListener("touchstart", handleTouchStart);
+canvas.addEventListener("touchmove", handleTouchMove);
 
 render();
 
