@@ -4,7 +4,7 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let zoom = 1;
+let zoom = 0.25;
 let offsetX = 0;
 let offsetY = 0;
 
