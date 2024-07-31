@@ -99,6 +99,58 @@ window.addEventListener("resize", handleResize);
 canvas.addEventListener("wheel", handleMouseWheel);
 canvas.addEventListener("mousemove", handleMouseDrag);
 
+//
+// PHONE
+//
+
+// Variables to track the initial touch points and zoom level
+let initialDistance = 0;
+let currentZoom = 1;
+let startX, startY;
+
+canvas.addEventListener("touchstart", handleTouchStart, false);
+canvas.addEventListener("touchmove", handleTouchMove, false);
+canvas.addEventListener("touchend", handleTouchEnd, false);
+
+function handleTouchStart(event) {
+  if (event.touches.length === 1) {
+    // Single touch - swipe
+    startX = event.touches[0].pageX;
+    startY = event.touches[0].pageY;
+  } else if (event.touches.length === 2) {
+    // Two touches - pinch zoom
+    const dx = event.touches[1].pageX - event.touches[0].pageX;
+    const dy = event.touches[1].pageY - event.touches[0].pageY;
+    initialDistance = Math.sqrt(dx * dx + dy * dy);
+  }
+}
+
+function handleTouchMove(event) {
+  if (event.touches.length === 1) {
+    // Single touch - swipe
+    const deltaX = event.touches[0].pageX - startX;
+    const deltaY = event.touches[0].pageY - startY;
+    // Move the canvas or image
+    // Example: Adjust position based on deltaX and deltaY
+    canvas.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+  } else if (event.touches.length === 2) {
+    // Two touches - pinch zoom
+    const dx = event.touches[1].pageX - event.touches[0].pageX;
+    const dy = event.touches[1].pageY - event.touches[0].pageY;
+    const currentDistance = Math.sqrt(dx * dx + dy * dy);
+    const zoomFactor = currentDistance / initialDistance;
+    currentZoom *= zoomFactor;
+    // Apply zoom
+    canvas.style.transform = `scale(${currentZoom})`;
+    initialDistance = currentDistance;
+  }
+}
+
+function handleTouchEnd(event) {
+  // Reset initial values after touch ends
+  initialDistance = 0;
+}
+
 render();
 
 function hsbToRgb(hue, sat, bri) {
