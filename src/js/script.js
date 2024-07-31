@@ -8,10 +8,11 @@ let zoom = 1;
 let offsetX = 0;
 let offsetY = 0;
 
+let maxIter = 200; // Adjustable
+
 function mandelbrot(x, y) {
   let real = x;
   let imag = y;
-  let maxIter = 100;
   let iter = 0;
 
   while (real * real + imag * imag <= 4 && iter < maxIter) {
@@ -39,19 +40,38 @@ function render() {
       let imag =
         (y - canvas.height / 2) / (0.5 * zoom * canvas.height) / aspectRatio +
         offsetY;
-      let color = mandelbrot(real, imag);
+      let iter = mandelbrot(real, imag);
       let pixelIndex = (y * canvas.width + x) * 4;
-      let colorValue = color === 100 ? 0 : (color * 255) / 100;
 
-      data[pixelIndex] = colorValue; // Red
-      data[pixelIndex + 1] = colorValue; // Green
-      data[pixelIndex + 2] = colorValue; // Blue
+      // Map the number of iterations to HSB values
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      if (iter === maxIter) {
+        r = 0;
+        g = 0;
+        b = 0;
+      } else {
+        let hue = 300 - ((Math.pow(iter / 50, 0.5) * 200) % 255);
+        let sat = 80;
+        let bri = 100;
+
+        [r, g, b] = hsbToRgb(hue, sat, bri);
+      }
+
+      data[pixelIndex] = r; // Red
+      data[pixelIndex + 1] = g; // Green
+      data[pixelIndex + 2] = b; // Blue
       data[pixelIndex + 3] = 255; // Alpha
     }
   }
 
   ctx.putImageData(imageData, 0, 0);
 }
+
+//
+// COMPUTER
+//
 
 function handleResize() {
   canvas.width = window.innerWidth;
@@ -80,3 +100,56 @@ canvas.addEventListener("wheel", handleMouseWheel);
 canvas.addEventListener("mousemove", handleMouseDrag);
 
 render();
+
+function hsbToRgb(hue, sat, bri) {
+  let r, g, b;
+  hue = ((hue % 360) + 360) % 360;
+  sat = Math.min(Math.max(sat, 0), 100) / 100;
+  bri = Math.min(Math.max(bri, 0), 100) / 100;
+
+  if (sat === 0) {
+    r = g = b = bri; // achromatic (gray)
+  } else {
+    let hueAngle = hue / 60;
+    let i = Math.floor(hueAngle);
+    let f = hueAngle - i;
+    let p = bri * (1 - sat);
+    let q = bri * (1 - sat * f);
+    let t = bri * (1 - sat * (1 - f));
+
+    switch (i) {
+      case 0:
+        r = bri;
+        g = t;
+        b = p;
+        break;
+      case 1:
+        r = q;
+        g = bri;
+        b = p;
+        break;
+      case 2:
+        r = p;
+        g = bri;
+        b = t;
+        break;
+      case 3:
+        r = p;
+        g = q;
+        b = bri;
+        break;
+      case 4:
+        r = t;
+        g = p;
+        b = bri;
+        break;
+      case 5:
+        r = bri;
+        g = p;
+        b = q;
+        break;
+    }
+  }
+
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
