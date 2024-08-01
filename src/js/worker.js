@@ -1,13 +1,15 @@
-function mandelbrot(x, y, maxIter) {
-  let real = x;
-  let imag = y;
+function mandelbrot(x0, y0, maxIter) {
+  let x = 0,
+    y = 0,
+    x2 = 0,
+    y2 = 0;
   let iter = 0;
 
-  while (real * real + imag * imag <= 4 && iter < maxIter) {
-    let tempReal = real * real - imag * imag + x;
-    let tempImag = 2 * real * imag + y;
-    real = tempReal;
-    imag = tempImag;
+  while (x2 + y2 <= 4 && iter < maxIter) {
+    y = 2 * x * y + y0;
+    x = x2 - y2 + x0;
+    x2 = x * x;
+    y2 = y * y;
     iter++;
   }
 
@@ -67,9 +69,28 @@ function hsbToRgb(hue, sat, bri) {
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
+function getColor(iter, maxIter) {
+  if (iter === maxIter) return [0, 0, 0];
+
+  let hue = 250 - ((Math.pow(iter / 50, 0.5) * 200) % 255);
+  let sat = 80;
+  let bri = 10 + ((Math.pow(iter / 50, 0.2) * 100) % 255);
+
+  return hsbToRgb(hue, sat, bri);
+}
+
+const colorPalette = new Array(101); // maxIter + 1
+for (let i = 0; i <= 100; i++) {
+  colorPalette[i] = getColor(i, 100);
+}
+
 self.onmessage = function (e) {
+  if (!e || !e.data) {
+    console.error("Invalid message received in worker");
+    return;
+  }
+
   const {
-    imageData,
     width,
     height,
     startY,
@@ -80,7 +101,8 @@ self.onmessage = function (e) {
     maxIter,
     aspectRatio,
   } = e.data;
-  const data = imageData.data;
+
+  const imageData = new ImageData(width, endY - startY);
 
   for (let y = startY; y < endY; y++) {
     for (let x = 0; x < width; x++) {
@@ -90,25 +112,16 @@ self.onmessage = function (e) {
       let iter = mandelbrot(real, imag, maxIter);
       let pixelIndex = ((y - startY) * width + x) * 4;
 
-      let r, g, b;
-      if (iter === maxIter) {
-        r = g = b = 0;
-      } else {
-        let hue = 250 - ((Math.pow(iter / 50, 0.5) * 200) % 255);
-        let sat = 80;
-        let bri = 10 + ((Math.pow(iter / 50, 0.2) * 100) % 255);
+      let [r, g, b] = colorPalette[iter];
 
-        [r, g, b] = hsbToRgb(hue, sat, bri);
-      }
-
-      data[pixelIndex] = r;
-      data[pixelIndex + 1] = g;
-      data[pixelIndex + 2] = b;
-      data[pixelIndex + 3] = 255;
+      imageData.data[pixelIndex] = r;
+      imageData.data[pixelIndex + 1] = g;
+      imageData.data[pixelIndex + 2] = b;
+      imageData.data[pixelIndex + 3] = 255;
     }
   }
 
-  self.postMessage({ imageData: imageData, startY: startY, endY: endY });
+  self.postMessage({ imageData, startY, endY }, [imageData.data.buffer]);
 };
 
 self.onerror = function (error) {
